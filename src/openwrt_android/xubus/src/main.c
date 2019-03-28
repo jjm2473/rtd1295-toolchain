@@ -9,6 +9,7 @@
  *  https://github.com/converseai/converse_proxy/blob/master/proxy.c
  **/
 
+#include <signal.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -315,6 +316,10 @@ int main(int argc, char **argv, char **envp)
 
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &event) == -1)
         ERR_EXIT("epoll_ctl");
+
+    struct sigaction sa;
+    sa.sa_handler = SIG_IGN;
+    sigaction(SIGPIPE, &sa, 0); 
 
     perror("listenfd %d\n", listenfd);
     perror("doAccept addr %x\n", doAccept);
