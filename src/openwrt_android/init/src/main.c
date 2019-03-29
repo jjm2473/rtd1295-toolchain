@@ -178,7 +178,7 @@ int main(int argc, char **argv, char **envp) {
             }
 
             // 0x004012a0
-            unshare(0x200);
+            unshare(CLONE_FS);
             chroot(".");
             exec_cmd = "/init";
             //return execv("/init", ["/init"]); // 0x4012bc

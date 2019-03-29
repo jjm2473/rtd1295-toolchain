@@ -9,6 +9,8 @@
  *  https://github.com/converseai/converse_proxy/blob/master/proxy.c
  **/
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <signal.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -29,6 +31,7 @@
 #define BUFF_LEN 1024
 
 #define perror(...) {}
+//#define perror printf
 
 
 struct Args
@@ -232,6 +235,7 @@ int doAccept(int epollfd, struct Args *args) // Callback
 
 int mainLoop(int epollfd)
 {
+    int i;
     struct epoll_event events[MAX_EVENTS];
     for (;;)
     {
@@ -248,7 +252,7 @@ int mainLoop(int epollfd)
         else if (en > 0)
         {
 
-            for (int i = 0; i < en; ++i)
+            for (i = 0; i < en; ++i)
             {
                 struct Context* ctx = (struct Context*)(events[i].data.ptr);
                 perror("get event %x %d\n", ctx->cb, ctx->args.fd);
@@ -290,10 +294,14 @@ int main(int argc, char **argv, char **envp)
     if (epollfd < 0)
         ERR_EXIT("epoll_create1");
 
+    len = sizeof(servaddr); // fix bug for ubus of realtek android, otherwise use SUN_LEN
+    memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sun_family = AF_LOCAL;
     strcpy(servaddr.sun_path, BIND_ADDR);
-    len = SUN_LEN(&servaddr);
+    // len = SUN_LEN(&servaddr);
     servaddr.sun_path[0] = '\0';
+
+    umask(0111);
 
     listenfd = socket(AF_LOCAL, SOCK_STREAM, 0);
     if (listenfd < 0)
@@ -301,6 +309,10 @@ int main(int argc, char **argv, char **envp)
 
     if (setnonblocking(listenfd) < 0)
         ERR_EXIT("nonblocking");
+
+    int opt=1;
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) 
+        ERR_EXIT("setsockopt");
 
     if (bind(listenfd, (struct sockaddr *)&servaddr, len) < 0)
         ERR_EXIT("bind");
